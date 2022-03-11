@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 
 import Searchbar from './components/Searchbar';
@@ -9,34 +9,26 @@ import 'react-toastify/dist/ReactToastify.css';
 import 'react-loader-spinner/dist/loader/css/react-spinner-loader.css';
 import './App.css';
 
-export default class App extends Component {
-  state = {
-    imageName: '',
-    showModal: false,
-    stateURL: '',
+export default function App() {
+  const [imageName, setImageName] = useState('');
+  const [showModal, setModal] = useState(false);
+  const [stateURL, setStateURL] = useState('');
+
+  const handleFormSubmit = query => {
+    setImageName(query);
   };
 
-  handleFormSubmit = query => {
-    this.setState({ imageName: query });
+  const toggleModal = url => {
+    setStateURL(url);
+    setModal(!showModal);
   };
 
-  toggleModal = url => {
-    this.setState(({ showModal }) => ({
-      stateURL: url,
-      showModal: !showModal,
-    }));
-  };
-
-  render() {
-    const { imageName, showModal, stateURL } = this.state;
-
-    return (
-      <div className="App">
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery imageName={imageName} handleModal={this.toggleModal} />
-        {showModal && <Modal onClose={this.toggleModal} imageURL={stateURL} />}
-        <ToastContainer />
-      </div>
-    );
-  }
+  return (
+    <div className="App">
+      <Searchbar onSubmit={handleFormSubmit} />
+      <ImageGallery imageName={imageName} handleModal={toggleModal} />
+      {showModal && <Modal onClose={toggleModal} imageURL={stateURL} />}
+      <ToastContainer />
+    </div>
+  );
 }

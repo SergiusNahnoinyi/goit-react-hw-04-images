@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 
 import PropTypes from 'prop-types';
@@ -17,85 +17,77 @@ const Status = {
   REJECTED: 'rejected',
 };
 
-export default class ImageGallery extends Component {
-  static propTypes = {
-    handleModal: PropTypes.func.isRequired,
-    imageName: PropTypes.string.isRequired,
-  };
+export default function ImageGallery({ imageName, handleModal }) {
+  const [currentPage, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [status, setStatus] = useState(Status.IDLE);
 
-  state = {
-    currentPage: 1,
-    images: [],
-    status: Status.IDLE,
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    const prevName = prevProps.imageName;
-    const nextName = this.props.imageName;
-    const prevPage = prevState.currentPage;
-    const currentPage = this.state.currentPage;
-
-    if (prevName !== nextName) {
-      this.setState(
-        { currentPage: 1, images: [], status: Status.PENDING },
-        () => this.getImages(nextName, 1),
-      );
+  useEffect(() => {
+    if (imageName !== '') {
+      setStatus(Status.PENDING);
+      getImages(imageName, 1);
     }
-    if (prevPage < currentPage) {
-      this.getImages(nextName, currentPage);
-    }
-  }
+    return () => {
+      setImages([]);
+      setPage(1);
+    };
+  }, [imageName]);
 
-  getImages = (nextName, currentPage) => {
-    pixabayApi.fetchImages(nextName, currentPage).then(images => {
+  useEffect(() => {
+    if (currentPage > 1) {
+      getImages(imageName, currentPage);
+    }
+  }, [currentPage]);
+
+  const getImages = (imageName, currentPage) => {
+    pixabayApi.fetchImages(imageName, currentPage).then(images => {
       if (images.length === 0) {
         toast.error('Ничего не найдено');
-        this.setState({ status: Status.REJECTED });
+        setStatus(Status.REJECTED);
         return;
       }
-      this.setState(prevState => ({
-        images: [...prevState.images, ...images],
-        status: Status.RESOLVED,
-      }));
+      setImages(prevImages => [...prevImages, ...images]);
+      setStatus(Status.RESOLVED);
     });
   };
 
-  incrementPage = () => {
-    this.setState(prevState => ({ currentPage: prevState.currentPage + 1 }));
+  const incrementPage = () => {
+    setPage(currentPage => currentPage + 1);
   };
 
-  handleImageClick = event => {
-    this.props.handleModal(event.target.lowsrc);
+  const handleImageClick = e => {
+    handleModal(e.target.lowsrc);
   };
 
-  render() {
-    const { images, status } = this.state;
+  if (status === 'idle' || status === 'rejected') {
+    return <ul className={s.Gallery}></ul>;
+  }
 
-    if (status === 'idle' || status === 'rejected') {
-      return <ul className={s.Gallery}></ul>;
-    }
+  if (status === 'pending') {
+    return <Loader />;
+  }
 
-    if (status === 'pending') {
-      return <Loader />;
-    }
-
-    if (status === 'resolved') {
-      return (
-        <>
-          <ul className={s.Gallery}>
-            {images.map(image => (
-              <ImageGalleryItem
-                onClick={this.handleImageClick}
-                key={image.id}
-                imageURL={image.webformatURL}
-                largeImage={image.largeImageURL}
-                name={image.tags}
-              />
-            ))}
-          </ul>
-          <Button onLoadMore={this.incrementPage} />
-        </>
-      );
-    }
+  if (status === 'resolved') {
+    return (
+      <>
+        <ul className={s.Gallery}>
+          {images.map(image => (
+            <ImageGalleryItem
+              onClick={handleImageClick}
+              key={image.id}
+              imageURL={image.webformatURL}
+              largeImage={image.largeImageURL}
+              name={image.tags}
+            />
+          ))}
+        </ul>
+        <Button onLoadMore={incrementPage} />
+      </>
+    );
   }
 }
+
+ImageGallery.propTypes = {
+  handleModal: PropTypes.func.isRequired,
+  imageName: PropTypes.string.isRequired,
+};
